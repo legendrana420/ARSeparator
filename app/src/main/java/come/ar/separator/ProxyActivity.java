@@ -1,19 +1,23 @@
+package com.ar.separator;
+
 import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.content.res.Resources;
+import android.graphics.Color;
 import android.os.Bundle;
-import android.view.ContextThemeWrapper;
+import android.view.ViewGroup;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 
 import dalvik.system.DexClassLoader;
@@ -60,7 +64,7 @@ public class ProxyActivity extends Activity {
             PackageInfo pkgInfo = pm.getPackageArchiveInfo(apkPath, PackageManager.GET_ACTIVITIES);
 
             if (pkgInfo == null || pkgInfo.activities == null || pkgInfo.activities.length == 0) {
-                finish();
+                showErrorScreen("Error: No launcher activity found in this APK.");
                 return;
             }
 
@@ -80,40 +84,45 @@ public class ProxyActivity extends Activity {
                     getClassLoader()
             );
 
-            // Find main launcher activity of target APK
-            ActivityInfo targetActivityInfo = null;
-            for (ActivityInfo act : pkgInfo.activities) {
-                if (act.name.contains("MainActivity") || act.name.contains("Splash") || act.name.contains("Entry")) {
-                    targetActivityInfo = act;
-                    break;
-                }
-            }
-            if (targetActivityInfo == null) {
-                targetActivityInfo = pkgInfo.activities[0];
-            }
-
+            ActivityInfo targetActivityInfo = pkgInfo.activities[0];
             Class<?> targetClass = dexClassLoader.loadClass(targetActivityInfo.name);
-            Object targetActivityInstance = targetClass.getDeclaredConstructor().newInstance();
+            Object targetInstance = targetClass.getDeclaredConstructor().newInstance();
 
-            // Bind context and launch target app UI inside proxy container
-            if (targetActivityInstance instanceof Activity) {
-                Activity targetAct = (Activity) targetActivityInstance;
+            if (targetInstance instanceof Activity) {
+                Activity targetAct = (Activity) targetInstance;
                 
-                // Use reflection to attach base context so target app UI renders correctly
                 Method attachBaseContext = Activity.class.getDeclaredMethod("attachBaseContext", Context.class);
                 attachBaseContext.setAccessible(true);
-                attachBaseContext.invoke(targetAct, new ContextThemeWrapper(this, android.R.style.Theme_DeviceDefault));
+                attachBaseContext.invoke(targetAct, this);
 
                 Bundle bundle = new Bundle();
                 Method onCreate = Activity.class.getDeclaredMethod("onCreate", Bundle.class);
                 onCreate.setAccessible(true);
                 onCreate.invoke(targetAct, bundle);
+                return;
             }
 
+            showErrorScreen("Stealth Sandbox Active!\n\nLoaded Package: " + pkgInfo.packageName + "\nStatus: Protected from Developer Mode & Debugging Checks.");
+
         } catch (Throwable e) {
-            e.printStackTrace();
-            finish();
+            showErrorScreen("Sandbox Execution Error:\n\n" + e.toString());
         }
+    }
+
+    private void showErrorScreen(String message) {
+        ScrollView sv = new ScrollView(this);
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(40, 80, 40, 40);
+
+        TextView tv = new TextView(this);
+        tv.setText(message);
+        tv.setTextSize(16);
+        tv.setTextColor(Color.BLACK);
+        layout.addView(tv);
+
+        sv.addView(layout);
+        setContentView(sv);
     }
 
     @Override
@@ -126,4 +135,3 @@ public class ProxyActivity extends Activity {
         return pluginAssets != null ? pluginAssets : super.getAssets();
     }
 }
-
