@@ -13,6 +13,9 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.lang.reflect.Method;
 
 import dalvik.system.DexClassLoader;
@@ -27,13 +30,36 @@ public class ProxyActivity extends Activity {
         AntiDebugHook.applyStealthHooks();
         super.onCreate(savedInstanceState);
 
-        String apkPath = getIntent().getStringExtra("apk_path");
-        if (apkPath == null) {
+        String inputPath = getIntent().getStringExtra("apk_path");
+        if (inputPath == null) {
             finish();
             return;
         }
 
         try {
+            // Fix: Copy APK to code_cache and make it read-only to prevent Writable Dex SecurityException
+            File srcFile = new File(inputPath);
+            File codeCacheDir = getCodeCacheDir();
+            File safeApkFile = new File(codeCacheDir, "safe_target.apk");
+
+            if (safeApkFile.exists()) {
+                safeApkFile.delete();
+            }
+
+            InputStream in = new FileInputStream(srcFile);
+            FileOutputStream out = new FileOutputStream(safeApkFile);
+            byte[] buf = new byte[8192];
+            int len;
+            while ((len = in.read(buf)) > 0) {
+                out.write(buf, 0, len);
+            }
+            in.close();
+            out.close();
+
+            // Make file read-only so Android security allows loading
+            safeApkFile.setReadOnly();
+            String apkPath = safeApkFile.getAbsolutePath();
+
             PackageManager pm = getPackageManager();
             PackageInfo pkgInfo = pm.getPackageArchiveInfo(apkPath, PackageManager.GET_ACTIVITIES);
 
@@ -42,7 +68,6 @@ public class ProxyActivity extends Activity {
                 return;
             }
 
-            // Initialize custom AssetManager for the cloned APK
             AssetManager am = AssetManager.class.newInstance();
             Method addAssetPath = AssetManager.class.getMethod("addAssetPath", String.class);
             addAssetPath.invoke(am, apkPath);
