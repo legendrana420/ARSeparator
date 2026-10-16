@@ -1,4 +1,3 @@
-package com.ar.separator;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -59,7 +58,6 @@ public class MainActivity extends Activity {
         status.setPadding(0, 0, 0, 40);
         root.addView(status);
 
-        // Button 1: Import Installed App (Play Store / Phone Apps)
         Button btnImportInstalled = new Button(this);
         btnImportInstalled.setText("+ Import Installed / Play Store App");
         btnImportInstalled.setOnClickListener(new View.OnClickListener() {
@@ -70,9 +68,8 @@ public class MainActivity extends Activity {
         });
         root.addView(btnImportInstalled);
 
-        // Button 2: Pick APK File from Storage
         Button btnSelectApk = new Button(this);
-        btnSelectApk.setText("+ Select APK File from Storage");
+        btnSelectApk.setText("+ Select APK File (Auto-Update Supported)");
         btnSelectApk.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -85,7 +82,7 @@ public class MainActivity extends Activity {
         root.addView(btnSelectApk);
 
         TextView listHeader = new TextView(this);
-        listHeader.setText("\n--- Apps Inside AR Separator Sandbox ---");
+        listHeader.setText("\n--- Installed Apps Inside AR Separator ---");
         listHeader.setTextSize(16);
         listHeader.setTextColor(Color.DKGRAY);
         listHeader.setPadding(0, 30, 0, 20);
@@ -120,7 +117,7 @@ public class MainActivity extends Activity {
         }
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Select App to Clone into Sandbox");
+        builder.setTitle("Select App to Install into Sandbox");
         builder.setItems(appNames.toArray(new String[0]), new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
@@ -134,6 +131,7 @@ public class MainActivity extends Activity {
     private void importApkFromFile(File sourceFile, String destName) {
         try {
             File destFile = new File(sandboxDir, destName);
+            // If already exists, it automatically overwrites (Seamless Update feature!)
             InputStream in = new FileInputStream(sourceFile);
             FileOutputStream out = new FileOutputStream(destFile);
             byte[] buf = new byte[8192];
@@ -143,10 +141,10 @@ public class MainActivity extends Activity {
             }
             in.close();
             out.close();
-            Toast.makeText(this, "Cloned into Sandbox: " + destName, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Installed/Updated in Sandbox: " + destName, Toast.LENGTH_SHORT).show();
             refreshSandboxList();
         } catch (Exception e) {
-            Toast.makeText(this, "Import Failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Installation Failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -157,7 +155,7 @@ public class MainActivity extends Activity {
             Uri uri = data.getData();
             if (uri != null) {
                 try {
-                    String fileName = "app_" + System.currentTimeMillis() + ".apk";
+                    String fileName = "custom_app.apk"; // Consistent name for update overwrite
                     File destFile = new File(sandboxDir, fileName);
                     InputStream in = getContentResolver().openInputStream(uri);
                     FileOutputStream out = new FileOutputStream(destFile);
@@ -168,10 +166,10 @@ public class MainActivity extends Activity {
                     }
                     in.close();
                     out.close();
-                    Toast.makeText(this, "APK Loaded into Sandbox!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "App Installed/Updated in Sandbox Successfully!", Toast.LENGTH_SHORT).show();
                     refreshSandboxList();
                 } catch (Exception e) {
-                    Toast.makeText(this, "Error loading APK: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "Error installing APK: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 }
             }
         }
@@ -182,7 +180,7 @@ public class MainActivity extends Activity {
         File[] files = sandboxDir.listFiles();
         if (files == null || files.length == 0) {
             TextView empty = new TextView(this);
-            empty.setText("No apps in sandbox yet. Tap a button above to add one.");
+            empty.setText("No apps installed in sandbox yet. Tap above to add one.");
             sandboxListContainer.addView(empty);
             return;
         }
@@ -206,16 +204,16 @@ public class MainActivity extends Activity {
             LinearLayout itemLayout = new LinearLayout(this);
             itemLayout.setOrientation(LinearLayout.VERTICAL);
             itemLayout.setPadding(25, 25, 25, 25);
-            itemLayout.setBackgroundColor(Color.rgb(240, 240, 240));
+            itemLayout.setBackgroundColor(Color.rgb(245, 245, 245));
 
             TextView tvName = new TextView(this);
-            tvName.setText(label + " (" + pkgName + ")");
-            tvName.setTextSize(16);
+            tvName.setText(label + "\nPkg: " + pkgName);
+            tvName.setTextSize(15);
             tvName.setTextColor(Color.BLACK);
             itemLayout.addView(tvName);
 
             Button btnLaunch = new Button(this);
-            btnLaunch.setText("Run in Stealth Sandbox");
+            btnLaunch.setText("Open App (Stealth Mode)");
             btnLaunch.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -227,7 +225,7 @@ public class MainActivity extends Activity {
             itemLayout.addView(btnLaunch);
 
             Button btnDelete = new Button(this);
-            btnDelete.setText("Remove from Sandbox");
+            btnDelete.setText("Uninstall from Sandbox");
             btnDelete.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
