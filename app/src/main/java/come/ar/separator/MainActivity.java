@@ -1,3 +1,4 @@
+package com.ar.separator;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -131,7 +132,6 @@ public class MainActivity extends Activity {
     private void importApkFromFile(File sourceFile, String destName) {
         try {
             File destFile = new File(sandboxDir, destName);
-            // If already exists, it automatically overwrites (Seamless Update feature!)
             InputStream in = new FileInputStream(sourceFile);
             FileOutputStream out = new FileOutputStream(destFile);
             byte[] buf = new byte[8192];
@@ -155,7 +155,7 @@ public class MainActivity extends Activity {
             Uri uri = data.getData();
             if (uri != null) {
                 try {
-                    String fileName = "custom_app.apk"; // Consistent name for update overwrite
+                    String fileName = "custom_app.apk";
                     File destFile = new File(sandboxDir, fileName);
                     InputStream in = getContentResolver().openInputStream(uri);
                     FileOutputStream out = new FileOutputStream(destFile);
@@ -176,6 +176,7 @@ public class MainActivity extends Activity {
     }
 
     private void refreshSandboxList() {
+        if (sandboxListContainer == null) return;
         sandboxListContainer.removeAllViews();
         File[] files = sandboxDir.listFiles();
         if (files == null || files.length == 0) {
